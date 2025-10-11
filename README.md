@@ -1,13 +1,73 @@
-# Meteor Addon Template
+# Zen Additions
 
-A template to allow easy usage of the Meteor Addon API.
+A Meteor Client addon that adds various utility features and enhancements.
+
+**Version:** 1.0.0 (First stable release)
+
+## Multi-Version Support
+
+This mod supports multiple Minecraft versions:
+- **1.21.8**
+- **1.21.7**
+- **1.21.6**
+- **1.21.5**
+- **1.21.4**
+
+See [BUILD.md](BUILD.md) for detailed instructions on building for specific versions.
+
+### Quick Build
+
+#### Building for a specific version (Windows):
+```powershell
+Copy-Item gradle-1.21.8.properties gradle.properties
+.\gradlew build
+```
+
+#### Building all versions at once:
+```powershell
+# Windows
+.\build-all.ps1
+
+# Linux/macOS
+./build-all.sh
+```
+
+Built JARs will be placed in the `builds/` directory.
+
+### Automated Builds
+
+The project includes a GitHub Action that automatically builds all versions on every push to the main/master branch. The built JARs can be downloaded from the Actions tab in GitHub.
+
+## Features
+
+- **Accurate Block Placement** - Precision block placement utilities
+- **Easy Bedrock Breaker** - Simplified bedrock breaking mechanics
+- **Projectile Trails** - Visual trails for projectiles
+- **No Gravity** - Movement module for removing gravity effects
+- **Moses** - World manipulation features
+- **Freeze** - Ghost mode freezing capabilities
+- **Ghost Block Fly** - Flying with ghost blocks
+
+### Commands
+
+- `/entitynbt` - View entity NBT data
+- `/ip` - Display current server IP
+- `/ping` - Check your connection latency
+- `/stats` - View player statistics
+- `/uuid` - Display entity UUIDs
+- `/equip` - Equipment management utilities
+- `/worldborder` - World border information
+
+## Installation
+
+1. Download the appropriate version JAR from releases
+2. Install [Meteor Client](https://meteorclient.com/)
+3. Place the JAR in your `.minecraft/mods` folder
+4. Launch Minecraft with Fabric
+
+## Development
 
 ### How to use
-
-- Clone this project
-- Use this template to create new modules/commands
-- Build the executable using the gradle `build` task.
-- Run the mod with Meteor.
 
 ### Project structure
 

@@ -1,9 +1,9 @@
 {
   "required": true,
-  "package": "com.example.addon.mixin",
+  "package": "net.zen.addon.mixins",
   "compatibilityLevel": "JAVA_21",
-  "client": [
-    "ExampleMixin"
+  "client": [    
+    "S2CPacketMixin"
   ],
   "injectors": {
     "defaultRequire": 1

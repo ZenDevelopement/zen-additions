@@ -31,3 +31,9 @@ bin/
 # fabric
 
 run/
+
+# multi-version builds
+builds/
+
+# project files
+spec.md

@@ -1,27 +1,27 @@
 {
   "schemaVersion": 1,
-  "id": "addon-template",
+  "id": "zen-additions",
   "version": "${version}",
-  "name": "Addon Template",
-  "description": "An addon template for Meteor Client addons.",
+  "name": "Zen Additions",
+  "description": "An utility functionality focused addon for Meteor Client.",
   "authors": [
-    "seasnail"
+    "noEngineer/yesEngineer"
   ],
   "contact": {
-    "repo": "https://github.com/MeteorDevelopment/meteor-addon-template"
+    "repo": "https://github.com/yesEngineer/zen-additions"
   },
   "icon": "assets/template/icon.png",
   "environment": "client",
   "entrypoints": {
     "meteor": [
-      "com.example.addon.AddonTemplate"
+      "net.zen.addon.ZenHandler"
     ]
   },
   "mixins": [
-    "addon-template.mixins.json"
+    "zen-additions.mixins.json"
   ],
   "custom": {
-    "meteor-client:color": "225,25,25"
+    "meteor-client:color": "252,177,244"
   },
   "depends": {
     "java": ">=21",
