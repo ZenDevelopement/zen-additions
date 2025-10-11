@@ -1,4 +1,4 @@
-package net.zen.addon.features.modules;
+package net.zen.addon.features.modules.utility;
 
 import meteordevelopment.meteorclient.systems.modules.Categories;
 import meteordevelopment.meteorclient.events.packets.PacketEvent;

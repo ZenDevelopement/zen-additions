@@ -1,4 +1,4 @@
-package net.zen.addon.features.modules;
+package net.zen.addon.features.modules.movement;
 
 import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.settings.BoolSetting;

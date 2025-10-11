@@ -1,4 +1,4 @@
-package net.zen.addon.features.modules;
+package net.zen.addon.features.modules.ghost;
 
 import meteordevelopment.meteorclient.events.entity.player.PlayerMoveEvent;
 import meteordevelopment.meteorclient.events.packets.PacketEvent;

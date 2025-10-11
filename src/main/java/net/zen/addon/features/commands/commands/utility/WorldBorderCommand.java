@@ -1,4 +1,4 @@
-package net.zen.addon.features.commands.commands;
+package net.zen.addon.features.commands.commands.utility;
 
 import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;

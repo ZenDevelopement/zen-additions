@@ -1,4 +1,4 @@
-package net.zen.addon.features.modules;
+package net.zen.addon.features.modules.utility;
 
 import meteordevelopment.meteorclient.events.render.Render3DEvent;
 import meteordevelopment.meteorclient.events.world.TickEvent;
