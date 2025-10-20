@@ -1,12 +1,14 @@
 name: Build and Release
 
 on:
-    push:
-        tags:
-            - '*'    # ✅ Runs when any tag is pushed (e.g. 1.0.0)
+    workflow_dispatch:
+        inputs:
+            release_tag:
+                description: 'Tag to build/release'
+                required: true
 
 permissions:
-    contents: write   # Needed to create releases & upload assets
+    contents: write   # Required to create releases & upload artifacts
 
 jobs:
     build:
@@ -57,7 +59,7 @@ jobs:
               uses: marvinpinto/action-automatic-releases@latest
               with:
                   repo_token: ${{ secrets.GITHUB_TOKEN }}
-                  automatic_release_tag: ${{ github.ref_name }}   # 👈 Uses the tag that triggered the build
+                  automatic_release_tag: ${{ github.event.inputs.release_tag }}
                   prerelease: false
-                  title: "Release ${{ github.ref_name }}"
+                  title: "Release ${{ github.event.inputs.release_tag }}"
                   files: artifacts/**/*
