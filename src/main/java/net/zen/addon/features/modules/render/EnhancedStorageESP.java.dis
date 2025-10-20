@@ -1,0 +1,363 @@
+package net.zen.addon.features.modules.render;
+
+import meteordevelopment.meteorclient.events.render.Render3DEvent;
+import meteordevelopment.meteorclient.renderer.ShapeMode;
+import meteordevelopment.meteorclient.settings.*;
+import meteordevelopment.meteorclient.systems.modules.Module;
+import meteordevelopment.meteorclient.utils.render.color.Color;
+import meteordevelopment.meteorclient.utils.render.color.SettingColor;
+import meteordevelopment.orbit.EventHandler;
+import net.minecraft.block.entity.*;
+import net.minecraft.inventory.Inventory;
+import net.minecraft.item.Item;
+import net.minecraft.item.Items;
+import net.minecraft.util.math.Box;
+import net.minecraft.util.math.BlockPos;
+import net.zen.addon.ZenHandler;
+
+import java.util.*;
+
+public class EnhancedStorageESP extends Module {
+    private final SettingGroup sgGeneral = settings.getDefaultGroup();
+    private final SettingGroup sgRender = settings.createGroup("Render");
+    private final SettingGroup sgEntropy = settings.createGroup("Entropy");
+    private final SettingGroup sgItemDetection = settings.createGroup("Item Detection");
+
+    // General Settings
+    private final Setting<Boolean> showEmpty = sgGeneral.add(new BoolSetting.Builder()
+        .name("show-empty")
+        .description("Show chests/containers that have no items.")
+        .defaultValue(true)
+        .build()
+    );
+
+    private final Setting<Boolean> showFull = sgGeneral.add(new BoolSetting.Builder()
+        .name("show-full")
+        .description("Show chests/containers that have items.")
+        .defaultValue(true)
+        .build()
+    );
+
+    private final Setting<Integer> renderDistance = sgGeneral.add(new IntSetting.Builder()
+        .name("render-distance")
+        .description("Maximum distance to render storage ESP.")
+        .defaultValue(64)
+        .min(8)
+        .sliderRange(8, 256)
+        .build()
+    );
+
+    // Render Settings
+    private final Setting<ShapeMode> shapeMode = sgRender.add(new EnumSetting.Builder<ShapeMode>()
+        .name("shape-mode")
+        .description("How the shapes are rendered.")
+        .defaultValue(ShapeMode.Both)
+        .build()
+    );
+
+    private final Setting<SettingColor> emptyColor = sgRender.add(new ColorSetting.Builder()
+        .name("empty-color")
+        .description("Color for empty containers.")
+        .defaultValue(new SettingColor(150, 150, 150, 75))
+        .visible(showEmpty::get)
+        .build()
+    );
+
+    private final Setting<SettingColor> fullColor = sgRender.add(new ColorSetting.Builder()
+        .name("full-color")
+        .description("Color for containers with items.")
+        .defaultValue(new SettingColor(0, 255, 0, 75))
+        .visible(showFull::get)
+        .build()
+    );
+
+    // Entropy Settings
+    private final Setting<Boolean> entropyMode = sgEntropy.add(new BoolSetting.Builder()
+        .name("entropy-mode")
+        .description("Visualize container fullness using heat-map colors (empty=cold, full=hot).")
+        .defaultValue(false)
+        .build()
+    );
+
+    private final Setting<EntropyStyle> entropyStyle = sgEntropy.add(new EnumSetting.Builder<EntropyStyle>()
+        .name("entropy-style")
+        .description("Color gradient style for entropy visualization.")
+        .defaultValue(EntropyStyle.Heat)
+        .visible(entropyMode::get)
+        .build()
+    );
+
+    private final Setting<Boolean> smoothGradient = sgEntropy.add(new BoolSetting.Builder()
+        .name("smooth-gradient")
+        .description("Use smooth gradient transitions instead of stepped colors.")
+        .defaultValue(true)
+        .visible(entropyMode::get)
+        .build()
+    );
+
+    // Item Detection Settings
+    private final Setting<Boolean> itemHighlight = sgItemDetection.add(new BoolSetting.Builder()
+        .name("item-highlight")
+        .description("Highlight containers that contain specific items.")
+        .defaultValue(false)
+        .build()
+    );
+
+    private final Setting<List<Item>> targetItems = sgItemDetection.add(new ItemListSetting.Builder()
+        .name("target-items")
+        .description("Items to search for in containers.")
+        .defaultValue(getDefaultTargetItems())
+        .visible(itemHighlight::get)
+        .build()
+    );
+
+    private final Setting<SettingColor> highlightColor = sgItemDetection.add(new ColorSetting.Builder()
+        .name("highlight-color")
+        .description("Color for containers with target items.")
+        .defaultValue(new SettingColor(255, 215, 0, 150))
+        .visible(itemHighlight::get)
+        .build()
+    );
+
+    private final Setting<Boolean> highlightPriority = sgItemDetection.add(new BoolSetting.Builder()
+        .name("highlight-priority")
+        .description("Item highlight overrides entropy/empty/full colors.")
+        .defaultValue(true)
+        .visible(itemHighlight::get)
+        .build()
+    );
+
+    // Enums
+    public enum EntropyStyle {
+        Heat,       // Blue -> Green -> Yellow -> Red
+        Rainbow,    // Full spectrum
+        Monochrome, // Gray -> White
+        Ocean,      // Deep Blue -> Cyan -> White
+        Fire        // Dark Red -> Orange -> Yellow -> White
+    }
+
+    // Cache for performance
+    private final Map<BlockPos, ContainerData> containerCache = new HashMap<>();
+    private int updateTicks = 0;
+
+    public EnhancedStorageESP() {
+        super(ZenHandler.CATEGORY, "enhanced-storage-esp", "Advanced ESP for storage containers with entropy visualization and item detection.");
+    }
+
+    @Override
+    public void onActivate() {
+        containerCache.clear();
+        updateTicks = 0;
+    }
+
+    @EventHandler
+    private void onRender(Render3DEvent event) {
+        if (mc.world == null) return;
+
+        updateTicks++;
+
+        // Update cache every 10 ticks (0.5 seconds)
+        if (updateTicks >= 10) {
+            updateCache();
+            updateTicks = 0;
+        }
+
+        // Render all cached containers
+        for (Map.Entry<BlockPos, ContainerData> entry : containerCache.entrySet()) {
+            BlockPos pos = entry.getKey();
+            ContainerData data = entry.getValue();
+
+            // Check distance
+            double distSq = mc.player.getPos().squaredDistanceTo(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+            if (distSq > renderDistance.get() * renderDistance.get()) {
+                continue;
+            }
+
+            // Determine color
+            Color color = getContainerColor(data);
+            if (color == null) continue;
+
+            // Render box
+            Box box = new Box(pos);
+            event.renderer.box(box, color, color, shapeMode.get(), 0);
+        }
+    }
+
+    private void updateCache() {
+        if (mc.world == null) return;
+
+        containerCache.clear();
+
+        // Iterate through all block entities using the chunk-based approach
+        for (var chunk : mc.world.getChunkManager().chunks.chunks()) {
+            for (BlockEntity blockEntity : chunk.getBlockEntities().values()) {
+                if (!isStorageBlock(blockEntity)) continue;
+
+                BlockPos pos = blockEntity.getPos();
+                ContainerData data = analyzeContainer(blockEntity);
+
+                if (data != null) {
+                    containerCache.put(pos, data);
+                }
+            }
+        }
+    }
+
+    private boolean isStorageBlock(BlockEntity blockEntity) {
+        return blockEntity instanceof ChestBlockEntity ||
+            blockEntity instanceof BarrelBlockEntity ||
+            blockEntity instanceof ShulkerBoxBlockEntity ||
+            blockEntity instanceof HopperBlockEntity ||
+            blockEntity instanceof DispenserBlockEntity ||
+            blockEntity instanceof DropperBlockEntity ||
+            blockEntity instanceof FurnaceBlockEntity ||
+            blockEntity instanceof BlastFurnaceBlockEntity ||
+            blockEntity instanceof SmokerBlockEntity ||
+            blockEntity instanceof BrewingStandBlockEntity;
+    }
+
+    private ContainerData analyzeContainer(BlockEntity blockEntity) {
+        if (!(blockEntity instanceof Inventory inventory)) return null;
+
+        int totalSlots = inventory.size();
+        int filledSlots = 0;
+        int totalItems = 0;
+        boolean hasTargetItem = false;
+
+        for (int i = 0; i < totalSlots; i++) {
+            var stack = inventory.getStack(i);
+            if (!stack.isEmpty()) {
+                filledSlots++;
+                totalItems += stack.getCount();
+
+                if (itemHighlight.get() && targetItems.get().contains(stack.getItem())) {
+                    hasTargetItem = true;
+                }
+            }
+        }
+
+        boolean isEmpty = filledSlots == 0;
+        double fillPercentage = (double) filledSlots / totalSlots;
+
+        return new ContainerData(isEmpty, fillPercentage, hasTargetItem, totalItems);
+    }
+
+    private Color getContainerColor(ContainerData data) {
+        // Priority: Item highlight > Entropy > Empty/Full
+        if (itemHighlight.get() && data.hasTargetItem) {
+            if (highlightPriority.get() || !entropyMode.get()) {
+                return highlightColor.get();
+            }
+        }
+
+        if (entropyMode.get()) {
+            return getEntropyColor(data.fillPercentage);
+        }
+
+        if (data.isEmpty) {
+            return showEmpty.get() ? emptyColor.get() : null;
+        } else {
+            return showFull.get() ? fullColor.get() : null;
+        }
+    }
+
+    private Color getEntropyColor(double fillPercentage) {
+        if (smoothGradient.get()) {
+            return switch (entropyStyle.get()) {
+                case Heat -> interpolateHeat(fillPercentage);
+                case Rainbow -> interpolateRainbow(fillPercentage);
+                case Monochrome -> interpolateMonochrome(fillPercentage);
+                case Ocean -> interpolateOcean(fillPercentage);
+                case Fire -> interpolateFire(fillPercentage);
+            };
+        } else {
+            return getSteppedColor(fillPercentage);
+        }
+    }
+
+    private Color interpolateHeat(double value) {
+        // Blue (0) -> Cyan (0.25) -> Green (0.5) -> Yellow (0.75) -> Red (1)
+        if (value < 0.25) {
+            return interpolate(new Color(0, 0, 255, 100), new Color(0, 255, 255, 100), value * 4);
+        } else if (value < 0.5) {
+            return interpolate(new Color(0, 255, 255, 100), new Color(0, 255, 0, 100), (value - 0.25) * 4);
+        } else if (value < 0.75) {
+            return interpolate(new Color(0, 255, 0, 100), new Color(255, 255, 0, 100), (value - 0.5) * 4);
+        } else {
+            return interpolate(new Color(255, 255, 0, 100), new Color(255, 0, 0, 150), (value - 0.75) * 4);
+        }
+    }
+
+    private Color interpolateRainbow(double value) {
+        int hue = (int) (value * 360);
+        return Color.fromHsv(hue, 0.8, 1.0);
+    }
+
+    private Color interpolateMonochrome(double value) {
+        int gray = (int) (value * 200) + 55;
+        return new Color(gray, gray, gray, 100);
+    }
+
+    private Color interpolateOcean(double value) {
+        if (value < 0.5) {
+            return interpolate(new Color(0, 0, 139, 100), new Color(0, 191, 255, 100), value * 2);
+        } else {
+            return interpolate(new Color(0, 191, 255, 100), new Color(240, 255, 255, 100), (value - 0.5) * 2);
+        }
+    }
+
+    private Color interpolateFire(double value) {
+        if (value < 0.33) {
+            return interpolate(new Color(139, 0, 0, 100), new Color(255, 69, 0, 100), value * 3);
+        } else if (value < 0.66) {
+            return interpolate(new Color(255, 69, 0, 100), new Color(255, 165, 0, 100), (value - 0.33) * 3);
+        } else {
+            return interpolate(new Color(255, 165, 0, 100), new Color(255, 255, 224, 150), (value - 0.66) * 3);
+        }
+    }
+
+    private Color getSteppedColor(double value) {
+        // Stepped entropy (5 levels)
+        if (value < 0.2) return new Color(0, 0, 255, 75);
+        if (value < 0.4) return new Color(0, 255, 255, 75);
+        if (value < 0.6) return new Color(0, 255, 0, 100);
+        if (value < 0.8) return new Color(255, 255, 0, 125);
+        return new Color(255, 0, 0, 150);
+    }
+
+    private Color interpolate(Color c1, Color c2, double factor) {
+        int r = (int) (c1.r + (c2.r - c1.r) * factor);
+        int g = (int) (c1.g + (c2.g - c1.g) * factor);
+        int b = (int) (c1.b + (c2.b - c1.b) * factor);
+        int a = (int) (c1.a + (c2.a - c1.a) * factor);
+        return new Color(r, g, b, a);
+    }
+
+    private List<Item> getDefaultTargetItems() {
+        List<Item> list = new ArrayList<>();
+        list.add(Items.DIAMOND);
+        list.add(Items.NETHERITE_INGOT);
+        list.add(Items.EMERALD);
+        list.add(Items.GOLDEN_APPLE);
+        list.add(Items.ENCHANTED_GOLDEN_APPLE);
+        list.add(Items.TOTEM_OF_UNDYING);
+        list.add(Items.ELYTRA);
+        list.add(Items.SHULKER_BOX);
+        return list;
+    }
+
+    // Data class
+    private static class ContainerData {
+        public final boolean isEmpty;
+        public final double fillPercentage;
+        public final boolean hasTargetItem;
+        public final int totalItems;
+
+        public ContainerData(boolean isEmpty, double fillPercentage, boolean hasTargetItem, int totalItems) {
+            this.isEmpty = isEmpty;
+            this.fillPercentage = fillPercentage;
+            this.hasTargetItem = hasTargetItem;
+            this.totalItems = totalItems;
+        }
+    }
+}

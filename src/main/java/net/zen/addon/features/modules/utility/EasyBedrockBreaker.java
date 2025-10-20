@@ -18,6 +18,7 @@ import net.minecraft.text.Text;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.Style;
 import net.minecraft.util.Formatting;
+import net.zen.addon.utils.VersionHelper;
 
 import java.util.Queue;
 import java.util.LinkedList;
@@ -25,7 +26,7 @@ import java.util.LinkedList;
 public class EasyBedrockBreaker extends Module {
     private final SettingGroup sgInfo = settings.createGroup("Info");
     private final SettingGroup sgHelp = settings.createGroup("Help");
-    
+
     // Renamed to follow Java naming conventions (lowercase first letter)
     private final Setting<Boolean> info = sgInfo.add(new BoolSetting.Builder()
         .name("Info")
@@ -60,9 +61,9 @@ public class EasyBedrockBreaker extends Module {
     @EventHandler(priority = EventPriority.HIGHEST + 1)
     private void onSendPacket(PacketEvent.Send event) {
         if (!isActive) return;
-        
+
         Packet<?> packet = event.packet;
-        
+
         // Check if the packet is one of the specific types we want to delay
         if (isTargetPacket(packet)) {
             delayedPackets.add(packet);
@@ -72,10 +73,10 @@ public class EasyBedrockBreaker extends Module {
 
     private boolean isTargetPacket(Packet<?> packet) {
         return packet instanceof PlayerActionC2SPacket ||
-               packet instanceof PlayerInputC2SPacket ||
-               packet instanceof PlayerInteractBlockC2SPacket ||
-               packet instanceof PlayerInteractItemC2SPacket ||
-               packet instanceof UpdateSelectedSlotC2SPacket;
+            packet instanceof PlayerInputC2SPacket ||
+            packet instanceof PlayerInteractBlockC2SPacket ||
+            packet instanceof PlayerInteractItemC2SPacket ||
+            packet instanceof UpdateSelectedSlotC2SPacket;
     }
 
     @Override
@@ -88,7 +89,7 @@ public class EasyBedrockBreaker extends Module {
         }
         isActive = false;
     }
-    
+
     // Extracted methods to handle setting changes
     private void displayInfo(boolean val) {
         if (val && mc.player != null) {
@@ -97,7 +98,7 @@ public class EasyBedrockBreaker extends Module {
                 .append(Text.literal("garlic-bred on github,")
                     .setStyle(Style.EMPTY
                         .withFormatting(Formatting.UNDERLINE)
-                        .withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, "https://github.com/garlic-bred/easy-bedrock-breaker"))
+                        .withClickEvent(VersionHelper.createClickEvent(ClickEvent.Action.OPEN_URL, "https://github.com/garlic-bred/easy-bedrock-breaker"))
                     )
                 );
             Text line2 = Text.literal("Code borrowed from ")
@@ -105,7 +106,7 @@ public class EasyBedrockBreaker extends Module {
                 .append(Text.literal("cqb13 Numby Hack")
                     .setStyle(Style.EMPTY
                         .withFormatting(Formatting.UNDERLINE)
-                        .withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, "https://github.com/cqb13/Numby-hack"))
+                        .withClickEvent(VersionHelper.createClickEvent(ClickEvent.Action.OPEN_URL, "https://github.com/cqb13/Numby-hack"))
                     )
                 );
             Text line3 = Text.literal("Suggested using accurateBlockPlacement")
@@ -113,12 +114,12 @@ public class EasyBedrockBreaker extends Module {
             mc.player.sendMessage(line1, false);
             mc.player.sendMessage(line2, false);
             mc.player.sendMessage(line3, false);
-            
+
             // Reset the setting after displaying info
             info.set(false);
         }
     }
-    
+
     private void displayTutorial(boolean val) {
         if (val && mc.player != null) {
             Text message = Text.literal("Tutorial: ")
@@ -126,12 +127,12 @@ public class EasyBedrockBreaker extends Module {
                 .append(Text.literal("Click here to watch the video")
                     .setStyle(Style.EMPTY
                         .withFormatting(Formatting.BLUE, Formatting.UNDERLINE)
-                        .withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, "https://www.youtube.com/watch?v=SLL8uwEe5fc"))
+                        .withClickEvent(VersionHelper.createClickEvent(ClickEvent.Action.OPEN_URL, "https://www.youtube.com/watch?v=SLL8uwEe5fc"))
                     )
                 );
-            
+
             mc.player.sendMessage(message, false);
-            
+
             // Reset the setting after displaying tutorial
             showTutorial.set(false);
         }

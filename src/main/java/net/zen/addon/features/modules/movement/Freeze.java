@@ -1,4 +1,4 @@
-package net.zen.addon.features.modules.ghost;
+package net.zen.addon.features.modules.movement;
 
 import meteordevelopment.meteorclient.events.entity.player.PlayerMoveEvent;
 import meteordevelopment.meteorclient.events.packets.PacketEvent;
@@ -51,7 +51,7 @@ public class Freeze extends Module {
     @EventHandler
     private void onPlayerMove(PlayerMoveEvent event) {
         if (!initialized) return;
-        
+
         if (freezeMovement.get()) {
             // Create a new Vec3d instead of modifying the existing one
             event.movement = new net.minecraft.util.math.Vec3d(0, 0, 0);
@@ -61,7 +61,7 @@ public class Freeze extends Module {
     @EventHandler
     private void onSendPacket(PacketEvent.Send event) {
         if (!initialized || mc.player == null) return;
-        
+
         if (event.packet instanceof PlayerMoveC2SPacket) {
             // For simplicity, just cancel all movement packets
             // This is the most reliable way to freeze the player
@@ -74,13 +74,13 @@ public class Freeze extends Module {
     @EventHandler
     private void onTick(meteordevelopment.meteorclient.events.world.TickEvent.Post event) {
         if (!initialized || mc.player == null) return;
-        
+
         // Apply position freezing
         if (freezeMovement.get()) {
             mc.player.setPos(lastX, lastY, lastZ);
             mc.player.setVelocity(0, 0, 0);
         }
-        
+
         // Apply rotation freezing
         if (freezeRotation.get()) {
             mc.player.setYaw(lastYaw);

@@ -7,10 +7,9 @@ import meteordevelopment.meteorclient.commands.Commands;
 import meteordevelopment.meteorclient.systems.hud.HudGroup;
 import meteordevelopment.meteorclient.systems.modules.Category;
 import meteordevelopment.meteorclient.systems.modules.Modules;
-import net.zen.addon.features.modules.ghost.*;
 import net.zen.addon.features.modules.movement.*;
 import net.zen.addon.features.modules.utility.*;
-import net.zen.addon.features.modules.world.*;
+import net.zen.addon.features.modules.render.*;
 import net.zen.addon.features.commands.commands.info.*;
 import net.zen.addon.features.commands.commands.utility.*;
 import net.zen.addon.utils.ZenChatPrefix;
@@ -28,7 +27,7 @@ public class ZenHandler extends MeteorAddon {
 
         ZenChatPrefix.register();
 
-        // Modules 
+        // Modules
         //Modules.get().add(new ModuleExample());
         Modules.get().add(new EasyBedrockBreaker());
         Modules.get().add(new AccurateBlockPlacement());
@@ -37,7 +36,8 @@ public class ZenHandler extends MeteorAddon {
         Modules.get().add(new NoGravity());
         Modules.get().add(new ProjectileTrails());
         Modules.get().add(new GhostBlockFly());
-        
+        //Modules.get().add(new EnhancedStorageESP());
+
 
         // Commands
         //Commands.add(new CommandExample());

@@ -1,4 +1,4 @@
-package net.zen.addon.features.modules.utility;
+package net.zen.addon.features.modules.render;
 
 import meteordevelopment.meteorclient.events.render.Render3DEvent;
 import meteordevelopment.meteorclient.events.world.TickEvent;
@@ -19,6 +19,7 @@ import net.minecraft.entity.projectile.ArrowEntity;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.util.math.Vec3d;
+import net.zen.addon.utils.VersionHelper;
 
 import java.lang.reflect.Field;
 import java.util.*;
@@ -363,7 +364,7 @@ public class ProjectileTrails extends Module {
         public Trail(ProjectileType type) {
             this.points = new ArrayList<>();
             this.particles = new ArrayList<>();
-            
+
             // Generate color based on selected mode and projectile type
             if (colorMode.get() == ColorMode.Random) {
                 this.color = Color.fromHsv(Utils.random(0.0D, 360.0D), 0.75D, 1.0D);
@@ -389,17 +390,17 @@ public class ProjectileTrails extends Module {
 
         public void render(Render3DEvent event, Integer entityId) {
             if (points.isEmpty() || points.size() < 2) return;
-            
+
             if (renderMode.get() == RenderMode.Lines || renderMode.get() == RenderMode.Both) {
                 renderLines(event);
             }
         }
-        
+
         private void renderLines(Render3DEvent event) {
             // Render trail
             for (int i = 0; i < points.size() - 1; i++) {
                 Color renderColor;
-                
+
                 if (colorMode.get() == ColorMode.Rainbow) {
                     // Improved rainbow effect
                     double baseHue = (System.currentTimeMillis() * rainbowSpeed.get() / 1000.0) % 360;
@@ -409,16 +410,16 @@ public class ProjectileTrails extends Module {
                 } else {
                     renderColor = color.copy();
                 }
-                
+
                 // Calculate alpha for fade effect - improved to be more visible
                 if (fadeOut.get()) {
                     float alpha = (float) i / points.size();
                     renderColor.a = (int) (255 * alpha);
                 }
-                
+
                 Vec3d current = points.get(i);
                 Vec3d next = points.get(i + 1);
-                
+
                 // Draw line with specified thickness
                 for (int t = 0; t < lineThickness.get(); t++) {
                     event.renderer.line(
@@ -459,58 +460,58 @@ public class ProjectileTrails extends Module {
     @EventHandler
     private void onTick(TickEvent.Post event) {
         tickCounter++;
-        
+
         // Process current projectiles and update trails
         for (Entity entity : mc.world.getEntities()) {
             if (isTrackableProjectile(entity)) {
                 // Determine projectile type
                 ProjectileType type = getProjectileType(entity);
-                
+
                 // Skip if this type is disabled
                 if (!isProjectileTypeEnabled(type)) continue;
-                
+
                 // Check if it's player's projectile
                 boolean isPlayerProjectile = isOwnedByPlayer(entity);
-                
+
                 // Skip if we only want player projectiles and this isn't one
                 if (showOnlyYours.get() && !isPlayerProjectile) continue;
-                
+
                 // Check if projectile is in ground
                 boolean inGround = isInGround(entity);
-                
+
                 // Store ground state
                 Integer entityId = entity.getId();
                 groundState.put(entityId, inGround);
-                
+
                 // Skip if projectile is in ground and we're removing on ground
                 if (inGround && removeOnGround.get()) {
                     projectiles.remove(entityId);
                     continue;
                 }
-                
+
                 // Get or create trail
                 Trail trail = projectiles.computeIfAbsent(entityId, id -> new Trail(type));
-                
+
                 // Check if the projectile was previously in ground but now isn't
                 if (trail.wasInGround && !inGround) {
                     // Clear the trail if the projectile was thrown again
                     trail.points.clear();
                     trail.particles.clear();
                 }
-                
+
                 trail.wasInGround = inGround;
-                
+
                 // Add point if position changed and interval matches
                 if (tickCounter % pointInterval.get() == 0) {
                     Vec3d pos = entity.getPos();
                     if (trail.points.isEmpty() || !trail.points.get(trail.points.size() - 1).equals(pos)) {
                         trail.points.add(pos);
-                        
+
                         // Add particle point
                         if (useParticles.get() || renderMode.get() == RenderMode.Particles || renderMode.get() == RenderMode.Both) {
                             trail.particles.add(new ParticlePoint(pos, particleLifetime.get()));
                         }
-                        
+
                         // Trim points if exceeding max
                         while (trail.points.size() > maxPoints.get()) {
                             trail.points.remove(0);
@@ -521,7 +522,7 @@ public class ProjectileTrails extends Module {
         }
 
         // Clean up old projectiles
-        projectiles.entrySet().removeIf(entry -> 
+        projectiles.entrySet().removeIf(entry ->
             mc.world.getEntityById(entry.getKey()) == null
         );
 
@@ -539,7 +540,7 @@ public class ProjectileTrails extends Module {
         for (Trail trail : projectiles.values()) {
             // Update existing particles
             trail.particles.removeIf(p -> !p.update());
-            
+
             // Spawn new particles
             if (useParticles.get() || renderMode.get() == RenderMode.Particles || renderMode.get() == RenderMode.Both) {
                 for (ParticlePoint point : trail.particles) {
@@ -557,23 +558,25 @@ public class ProjectileTrails extends Module {
 
     private void spawnParticleAtPoint(ParticlePoint point, Trail trail) {
         if (mc.world == null) return;
-        
+
         // Only spawn particles periodically to avoid overwhelming the client
         if (tickCounter % 2 != 0) return;
-        
+
         for (int i = 0; i < particleDensity.get(); i++) {
             ParticleEffect particle = getParticleEffect(trail);
-            
+
             if (particle != null) {
                 // Add small random offset for more natural look
                 double offsetX = (Math.random() - 0.5) * 0.05;
                 double offsetY = (Math.random() - 0.5) * 0.05;
                 double offsetZ = (Math.random() - 0.5) * 0.05;
-                
-                mc.world.addParticle(
+
+                // FIXED: Use VersionHelper for particle spawning
+                VersionHelper.addColoredParticle(
+                    mc.world,
                     particle,
-                    point.pos.x + offsetX, 
-                    point.pos.y + offsetY, 
+                    point.pos.x + offsetX,
+                    point.pos.y + offsetY,
                     point.pos.z + offsetZ,
                     0, 0, 0
                 );
@@ -597,11 +600,11 @@ public class ProjectileTrails extends Module {
 
     private boolean isTrackableProjectile(Entity entity) {
         return entity instanceof PersistentProjectileEntity || // Arrows and tridents
-               entity instanceof SnowballEntity ||
-               entity instanceof EggEntity ||
-               entity instanceof EnderPearlEntity ||
-               entity instanceof PotionEntity ||
-               entity instanceof ExperienceBottleEntity;
+            entity instanceof SnowballEntity ||
+            entity instanceof EggEntity ||
+            entity instanceof EnderPearlEntity ||
+            entity instanceof PotionEntity ||
+            entity instanceof ExperienceBottleEntity;
     }
 
     private ProjectileType getProjectileType(Entity entity) {

@@ -1,4 +1,4 @@
-package net.zen.addon.features.modules.ghost;
+package net.zen.addon.features.modules.movement;
 
 import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.settings.*;
@@ -32,7 +32,7 @@ public class GhostBlockFly extends Module {
         .defaultValue(Collections.singletonList(Blocks.BARRIER))
         .build()
     );
-    
+
     private final Setting<Boolean> randomizeBlocks = sgBlocks.add(new BoolSetting.Builder()
         .name("randomize-blocks")
         .description("Randomizes block placement when multiple blocks are selected.")
@@ -94,21 +94,21 @@ public class GhostBlockFly extends Module {
 
         // Get current position
         BlockPos currentPos = mc.player.getBlockPos().add(0, -1, 0);
-        
+
         // Handle ghost block placement
         if (!mc.options.sneakKey.isPressed() && mc.world.getBlockState(currentPos).getBlock() instanceof AirBlock) {
             // Save original state before modifying
             BlockState originalState = mc.world.getBlockState(currentPos);
-            
+
             // Select block to place
             Block blockToPlace = getSelectedBlock();
-            
+
             // Place the ghost block
             mc.world.setBlockState(currentPos, blockToPlace.getDefaultState());
-            
+
             // Add to queue
             placedBlocks.add(new BlockPosState(currentPos, originalState));
-            
+
             // Remove oldest blocks if we exceed the limit
             while (placedBlocks.size() > maxGhostBlocks.get()) {
                 BlockPosState oldest = placedBlocks.poll();
@@ -138,7 +138,7 @@ public class GhostBlockFly extends Module {
         // Smart anti-kick
         if (antiKick.get()) {
             tickCounter++;
-            
+
             if (tickCounter >= antiKickInterval.get()) {
                 antiKickActivated = true;
                 mc.player.setVelocity(mc.player.getVelocity().x, -antiKickAmount.get(), mc.player.getVelocity().z);
@@ -153,15 +153,15 @@ public class GhostBlockFly extends Module {
 
     private Block getSelectedBlock() {
         List<Block> blocks = blockSelection.get();
-        
+
         if (blocks.isEmpty()) {
             return Blocks.BARRIER; // Default to barrier if list is empty
         }
-        
+
         if (blocks.size() == 1 || !randomizeBlocks.get()) {
             return blocks.get(0); // Return first block if only one or randomization is off
         }
-        
+
         // Randomize block selection
         return blocks.get(random.nextInt(blocks.size()));
     }
@@ -174,7 +174,7 @@ public class GhostBlockFly extends Module {
                 mc.world.setBlockState(blockPosState.pos, blockPosState.originalState);
             }
         }
-        
+
         placedBlocks.clear();
         tickCounter = 0;
         antiKickActivated = false;
